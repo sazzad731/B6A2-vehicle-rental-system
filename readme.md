@@ -14,3 +14,12 @@ This is a robust and secure backend API for a vehicle rental management system. 
 - Admin: Full system access for managing all resources (vehicles, users, and all bookings).
 - Customer: Restricted access to view vehicles and manage only their own bookings.Secure 
 - **Authentication:** User authentication via JWT after password hashing with bcrypt.
+
+
+## 🛠️ Technology Stack
+
+- **Node.js** + **TypeScript**
+- **Express.js** (web framework)
+- **PostgreSQL** (database)
+- **bcrypt** (password hashing)
+- **jsonwebtoken** (JWT authentication)
