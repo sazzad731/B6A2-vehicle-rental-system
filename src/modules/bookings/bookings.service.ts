@@ -121,12 +121,20 @@ const getBookings = async (email: string, role: string) => {
 
 
 
-const updateBooking = async (bookingId: string, status: string, email: string, role: string) => {
-  try {
-    await pool.query("BEGIN");
 
-    const bookingInfo = await pool.query(
-      `SELECT *, users.email FROM bookings JOIN users ON bookings.customer_id=users.id WHERE bookings.id=$1`,
+const updateBooking = async (bookingId: string, status: string, email: string, role: string) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const bookingInfo = await client.query(
+      `
+      SELECT b.*, u.email
+      FROM bookings b
+      JOIN users u ON b.customer_id = u.id
+      WHERE b.id = $1
+      `,
       [bookingId]
     );
 
@@ -152,12 +160,12 @@ const updateBooking = async (bookingId: string, status: string, email: string, r
         throw new Error("Cannot cancel after start date");
       }
 
-      await pool.query(`UPDATE bookings SET status =$1 WHERE id = $2`, [
-        status,
-        bookingId,
-      ]);
+      await client.query(
+        `UPDATE bookings SET status = 'cancelled' WHERE id = $1`,
+        [bookingId]
+      );
 
-      await pool.query(
+      await client.query(
         `UPDATE vehicles SET availability_status = 'available' WHERE id = $1`,
         [booking.vehicle_id]
       );
@@ -168,29 +176,40 @@ const updateBooking = async (bookingId: string, status: string, email: string, r
         throw new Error("Admin can only set status to returned");
       }
 
-      await pool.query(`UPDATE bookings SET status=$1 WHERE id = $2`, [
-        status,
-        bookingId,
-      ]);
+      await client.query(
+        `UPDATE bookings SET status = 'returned' WHERE id = $1`,
+        [bookingId]
+      );
 
-      await pool.query(
-        `UPDATE vehicles SET availability_status=$1 WHERE id = $2`,
-        ["available", booking.vehicle_id]
+      await client.query(
+        `UPDATE vehicles SET availability_status = 'available' WHERE id = $1`,
+        [booking.vehicle_id]
       );
     }
 
-    await pool.query("COMMIT");
+    await client.query("COMMIT");
 
-    const result = await pool.query(`SELECT * FROM bookings WHERE id = $1`, [
-      bookingId,
-    ]);
+    const bookings = await client.query(
+      `SELECT * FROM bookings WHERE id = $1`,
+      [bookingId]
+    );
+
+    const vehicle = await client.query(
+      `SELECT availability_status FROM vehicles WHERE id=$1`,
+      [bookings.rows[0].vehicle_id]
+    );
+
+    const result = [booking, vehicle.rows[0]]
 
     return result;
   } catch (error) {
-    await pool.query("ROLLBACK");
-    throw error; 
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
 };
+
 
 
 
