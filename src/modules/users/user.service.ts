@@ -9,11 +9,18 @@ const getAllUsers = async () => {
 
 
 
-const updateUser = async (id: string, userEmail: string, payload: Record<string, unknown>) => {
-  const {name, email, phone, role} = payload;
+const updateUser = async (id: string, userEmail: string, userRole: string, payload: Record<string, unknown>) => {
+  const { name, email, phone } = payload;
+  let { role } = payload;
+  if (userRole !== "admin") {
+    role = null;
+  }
   const result = await pool.query(
-    `UPDATE users SET name=$1, email=$2, phone=$3, role=$4 WHERE id=$5 AND (email=$6 OR role=$7) RETURNING *`,
-    [name, email, phone, role, id, userEmail, "admin"]
+    `UPDATE users 
+     SET name=$1, email=$2, phone=$3, role=COALESCE($4, role) 
+     WHERE id=$5 AND (email=$6 OR $7 = 'admin') 
+     RETURNING *`,
+    [name, email, phone, role, id, userEmail, userRole]
   );
   return result;
 }

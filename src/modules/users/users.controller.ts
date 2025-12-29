@@ -22,13 +22,13 @@ const getAllUsers = async (req: Request, res: Response) => {
 
 const updateUser = async (req: Request, res: Response) => {
   const { userId } = req.params;
-  const { email } = req.user!;
+  const { email, role } = req.user!;
   try {
-    const result = await usersServices.updateUser(userId as string, email, req.body);
+    const result = await usersServices.updateUser(userId as string, email, role, req.body);
     if (result.rowCount === 0) {
-      return res.status(403).json({
+      return res.status(404).json({
         success: false,
-        message: "Forbidden access",
+        message: "User not found or you don't have permission to update",
       });
     }
     res.status(200).json({
